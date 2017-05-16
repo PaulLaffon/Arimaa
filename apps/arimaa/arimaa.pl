@@ -11,7 +11,7 @@ concat([],L,L).
 concat([T|Q],L,[T|R]):- concat(Q,L,R).
 
 %indique si une case n'est pas vide 
-est_pas_vide([X,Y],Board,1):-element([X,Y,_,_],Board).
+est_pas_vide([X,Y],Board):-element([X,Y,_,_],Board).
 
 
 %indique la force d'une piece
@@ -23,7 +23,7 @@ force([_,_,camel,_],4).
 force([_,_,elephant,_],5).
 
 %indique si deux pièces sont amies 
-ami([_,_,_,X],[_,_,_,X],1).
+ami([_,_,_,X],[_,_,_,X]).
 
 
 %Donne les quatres cases adjacentes de la piece
