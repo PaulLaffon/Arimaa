@@ -10,9 +10,9 @@ element(X, [T|Q]):- element (X,Q).
 concat([],L,L).
 concat([T|Q],L,[T|R]):- concat(Q,L,R).
 
-%indique si une case n'est pas vide (1 si oui, 0 sinon)
+%indique si une case n'est pas vide 
 est_pas_vide([X,Y],Board,1):-element([X,Y,_,_],Board).
-est_pas_vide([X,Y],Board,0):-\+element([X,Y,_,_],Board).
+
 
 %indique la force d'une piece
 force([_,_,rabbit,_],0).
@@ -22,9 +22,9 @@ force([_,_,horse,_],3).
 force([_,_,camel,_],4).
 force([_,_,elephant,_],5).
 
-%indique si deux pièces sont amies (1 si oui 0 sinon)
+%indique si deux pièces sont amies 
 ami([_,_,_,X],[_,_,_,X],1).
-ami([_,_,_,X],[_,_,_,Y],0):-X\=Y.
+
 
 %Donne les quatres cases adjacentes de la piece
 adjacent([X,Y,_,_],[X+1,Y],[X,Y+1]):- X=0,Y=0,!.
