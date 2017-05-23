@@ -46,23 +46,28 @@ case_ami([_,_,_,X],[_,_,_,X]).
 % default call
 get_moves([[[1,0],[2,0]],[[0,0],[1,0]],[[0,1],[0,0]],[[0,0],[0,1]]], Gamestate, Board).
 
+
+% Retourne les endroits ou une piece a le droit d'aller en 1 case, Xsuiv et Ysuiv sont les valeurs de retour
+% ex : possibilite_deplacement([0, 1, camel, silver], X, Y, 3, Chemin, Board(à renseigner), NouveauBoard) => tout les deplacement à 3 cases maximum
+% Le retour se fait sur les variables Xsuiv, Ysuiv, Chemin et NouveauBoard
+possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, [[[X, Y], [Xsuiv, Ysuiv]]], Board, NouveauBoard) :- N > 0,
+                                                                  deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard).
+
+possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, [[[X, Y], [Xsuiv, Ysuiv]]|Chemin], Board, NouveauBoard) :- N > 1,   
+                                                            deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, BoardSuiv), 
+                                                            possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 1, Chemin, BoardSuiv, NouveauBoard).
+
+% Deplacement d'une piece d'une seule case dans le board, utilisé dans la fonction possibilite_deplacement
+% ex : deplacement_une_case([1, 0, camel, silver], X, Y, Board(à renseigner), NouveauBoard) => retour sur Xsuiv, Ysuiv et NouveauBoard
+deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente(X, Y, Xsuiv, Ysuiv),
+                                                                  not(is_freeze([X, Y, Piece, Couleur], Board)),
+                                                                  est_vide(Xsuiv, Ysuiv, Board),
+                                                                  deplacement(X, Y, Xsuiv, Ysuiv, Board, NouveauBoard).
+
 % Déplace la piece en (X, Y) en (Xsuiv, Ysuiv) dans le board result, ne vérifie pas l'intégrité du nouveauBoard
 % ex : deplacement(0, 0, 0, 1, ancienBoard, NouveauBoard) => la piece en (0, 0) passe en (0, 1)
 deplacement(X, Y, Xsuiv, Ysuiv, [[X, Y, Piece, Couleur]|Q], [[Xsuiv, Ysuiv, Piece, Couleur]|Q]) :- !.
 deplacement(X, Y, Xsuiv, Ysuiv, [T|Q], [T|Q2]) :- deplacement(X, Y, Xsuiv, Ysuiv, Q, Q2).
-
-
-% Retourne les endroits ou une piece a le droit d'aller en 1 case, Xsuiv et Ysuiv sont les valeurs de retour
-possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Board) :- N > 0,
-                                                            pos_adjacente(X, Y, Xsuiv, Ysuiv),
-                                                            not(is_freeze([X, Y, Piece, Couleur], Board)),
-                                                            est_vide(Xsuiv, Ysuiv, Board).
-
-possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, Board) :- N > 1,   pos_adjacente(X, Y, Xsuiv, Ysuiv),
-                                                            not(is_freeze([X, Y, Piece, Couleur], Board)),
-                                                            est_vide(Xsuiv, Ysuiv, Board),
-                                                            deplacement(X, Y, Xsuiv, Ysuiv, Board, NouveauBoard),
-                                                            possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 1, NouveauBoard).
 
 % Renvoie vrai si la piece sur la case est freeze (piece ennemie plus forte a côté)
 is_freeze([X, Y, Type, Couleur], Board) :-      piece_adjacente([X, Y, Type, Couleur], Case, Board),
