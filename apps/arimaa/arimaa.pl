@@ -57,12 +57,23 @@ possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, [[[X, Y], [Xsuiv, Ysuiv]
                                                             deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, BoardSuiv), 
                                                             possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 1, Chemin, BoardSuiv, NouveauBoard).
 
-possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, [Mouvements|Chemin], Board, NouveauBoard) :- N > 2,
+% Quand on veut faire une autre action après pousser
+possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, Chemin, Board, NouveauBoard) :- N > 2,
                                                                   pousser([X, Y, Type, Couleur], Xsec, Ysec, Mouvements, Board, BoardSuiv),
-                                                                  possibilite_deplacement([Xsec, Ysec, Type, Couleur], W, Z, N - 2, Chemin, BoardSuiv, NouveauBoard).
+                                                                  possibilite_deplacement([Xsec, Ysec, Type, Couleur], W, Z, N - 2, FinChemin, BoardSuiv, NouveauBoard),
+                                                                  append(Mouvements, FinChemin, Chemin).
 
+% Lorsque pousser est la dernière action qu'on fait'
 possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Chemin, Board, NouveauBoard) :- N > 1,
                                                                   pousser([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard).
+
+possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, Chemin, Board, NouveauBoard) :- N > 2,
+                                                                  tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, Mouvements, Board, BoardSuiv),
+                                                                  possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 2, FinChemin, BoardSuiv, NouveauBoard),
+                                                                  append(Mouvements, FinChemin, Chemin).
+
+possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Chemin, Board, NouveauBoard) :-  N > 1,
+                                                                  tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard).
 
 % Gère les possibilités de posser, est utilisé dans les possibilités de déplacement
 pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X, Y], [Xsec, Ysec]]], Board, NouveauBoard) :- 
@@ -77,6 +88,16 @@ pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X,
 % Renvoie les différentes position où on peut pousser un ennemi adjacent (On peut pousser dans tout les directions)
 pos_pousser([X, Y, _, _], Xsuiv, Ysuiv) :- pos_adjacente(X, Y, Xsuiv, Ysuiv).
 
+% Gère les possibilités de tirer une pièce, est utilisé dans les possibilités de déplacements
+tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, [[[X, Y], [Xsuiv, Ysuiv]], [[Xsec, Ysec], [X, Y]]], Board, NouveauBoard) :-
+                                                                  piece_adjacente([X, Y, Type, Couleur], [Xsec, Ysec, T, C], Board),
+                                                                  case_ennemi([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
+                                                                  est_plus_fort([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
+                                                                  pos_adjacente(X, Y, Xsuiv, Ysuiv),
+                                                                  est_vide(Xsuiv, Ysuiv, Board),
+                                                                  deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp),
+                                                                  deplacement(Xsec, Ysec, X, Y, BoardTemp, NouveauBoard).
+
 % Deplacement d'une piece d'une seule case dans le board, utilisé dans la fonction possibilite_deplacement
 % ex : deplacement_une_case([1, 0, camel, silver], X, Y, Board(à renseigner), NouveauBoard) => retour sur Xsuiv, Ysuiv et NouveauBoard
 deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente(X, Y, Xsuiv, Ysuiv),
@@ -90,9 +111,14 @@ deplacement(X, Y, Xsuiv, Ysuiv, [[X, Y, Piece, Couleur]|Q], [[Xsuiv, Ysuiv, Piec
 deplacement(X, Y, Xsuiv, Ysuiv, [T|Q], [T|Q2]) :- deplacement(X, Y, Xsuiv, Ysuiv, Q, Q2).
 
 % Renvoie vrai si la piece sur la case est freeze (piece ennemie plus forte a côté)
-is_freeze([X, Y, Type, Couleur], Board) :-      piece_adjacente([X, Y, Type, Couleur], Case, Board),
+is_freeze([X, Y, Type, Couleur], Board) :-      not(ami_adjacent([X, Y, Type, Couleur], Board)),
+                                                piece_adjacente([X, Y, Type, Couleur], Case, Board),
                                                 case_ennemi([X, Y, Type, Couleur], Case), 
                                                 est_plus_fort(Case, [X, Y, Type, Couleur]), !.
+
+% Renvoie vrai si une piece amie est adjacente
+ami_adjacent([X, Y, Type, Couleur], Board) :-   piece_adjacente([X, Y, Type, Couleur], Case, Board),
+                                                case_ami([X, Y, Type, Couleur], Case), !.
 
 % Renvoie les différentes piece qui sont sur des cases adjacentes
 piece_adjacente([X, Y, _, _], Case, Board) :- pos_adjacente(X, Y, Xsuiv, Ysuiv), get_case(Xsuiv, Ysuiv, Case, Board).
