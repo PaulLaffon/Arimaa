@@ -137,14 +137,14 @@ dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
 get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur], Board).
 
 %Calcule la somme des forces des pieces argentees
-somme_des_forces_argent([], 0)!
-somme_des_forces_argent([[X, Y, Type, gold]|Q], S):-somme_des_forces([Q], S)!
+somme_des_forces_argent([], 0)!.
+somme_des_forces_argent([[X, Y, Type, gold]|Q], S):-somme_des_forces([Q], S)!.
 somme_des_forces_argent([[X, Y, Type, silver]|Q], S):-somme_des_forces([Q], Res),force([X, Y, Type, silver],F), S is Res+F.
 
 
 %Calcule la somme des forces des pieces doree
-somme_des_forces_dore([], 0)!
-somme_des_forces_dore([[X, Y, Type, silver]|Q], S):-somme_des_forces([Q], S)!
+somme_des_forces_dore([], 0)!.
+somme_des_forces_dore([[X, Y, Type, silver]|Q], S):-somme_des_forces([Q], S)!.
 somme_des_forces_dore([[X, Y, Type, gold]|Q], S,):-somme_des_forces([Q], Res),force([X, Y, Type, gold],F), S is Res+F.
 
 %Calcule la différence des forces entre les pieces argentees et les pieces dorres
