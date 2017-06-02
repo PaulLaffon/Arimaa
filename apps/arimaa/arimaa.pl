@@ -135,3 +135,10 @@ dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
 % Retourne la case correspondant a la position X, Y. Si aucune case n'est trouvé, renvoie false  
 % ex : get_case(0, 0, Case, [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]])
 get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur], Board).
+
+
+%Renvoie une note qui evalue la situation du board. 
+note([[X, Y, Piece, Couleur]|Q], N) :- somme_des_forces([[X, Y, Piece, Couleur]|Q],S),distance_plus_proche_lapin([[X, Y, Piece, Couleur]|Q],D), N is S+D.
+
+
+%Calcule la somme des forces des pieces
