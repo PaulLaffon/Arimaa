@@ -138,7 +138,16 @@ get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur],
 
 
 %Renvoie une note qui evalue la situation du board. 
-note([[X, Y, Piece, Couleur]|Q], N) :- somme_des_forces([[X, Y, Piece, Couleur]|Q],S),distance_plus_proche_lapin([[X, Y, Piece, Couleur]|Q],D), N is S+D.
+note([[X, Y, Piece, Couleur]|Q], N) :- difference_des_forces([[X, Y, Piece, Couleur]|Q],Dif),distance_plus_proche_lapin([[X, Y, Piece, Couleur]|Q],D), N is Dif+D.
 
 
-%Calcule la somme des forces des pieces
+%Calcule la somme des forces des pieces argentees
+somme_des_forces_argent([], 0, silver)!
+somme_des_forces_argent([[X, Y, Type, gold]|Q], S, silver):-somme_des_forces([Q], S, silver)!
+somme_des_forces_argent([[X, Y, Type, silver]|Q], S, silver):-somme_des_forces([Q], Res, silver),force([X, Y, Type, silver],F), S is Res+F.
+
+
+%Calcule la somme des forces des pieces doree
+somme_des_forces_argent([], 0, gold)!
+somme_des_forces_argent([[X, Y, Type, silver]|Q], S, gold):-somme_des_forces([Q], S, gold)!
+somme_des_forces_argent([[X, Y, Type, gold]|Q], S, silver):-somme_des_forces([Q], Res, gold),force([X, Y, Type, gold],F), S is Res+F.
