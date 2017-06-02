@@ -136,18 +136,22 @@ dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
 % ex : get_case(0, 0, Case, [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]])
 get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur], Board).
 
+%Calcule la somme des forces des pieces argentees
+somme_des_forces_argent([], 0)!
+somme_des_forces_argent([[X, Y, Type, gold]|Q], S):-somme_des_forces([Q], S)!
+somme_des_forces_argent([[X, Y, Type, silver]|Q], S):-somme_des_forces([Q], Res),force([X, Y, Type, silver],F), S is Res+F.
+
+
+%Calcule la somme des forces des pieces doree
+somme_des_forces_dore([], 0)!
+somme_des_forces_dore([[X, Y, Type, silver]|Q], S):-somme_des_forces([Q], S)!
+somme_des_forces_dore([[X, Y, Type, gold]|Q], S,):-somme_des_forces([Q], Res),force([X, Y, Type, gold],F), S is Res+F.
+
+%Calcule la différence des forces entre les pieces argentees et les pieces dorres
+
+difference_des_forces([[X, Y, Piece, Couleur]|Q],Dif):-somme_des_forces_argent([[X, Y, Type, Couleur]|Q], S1),somme_des_forces_dore([[X, Y, Type, Couleur]|Q], S2), Dif is S1-S2.
 
 %Renvoie une note qui evalue la situation du board. 
 note([[X, Y, Piece, Couleur]|Q], N) :- difference_des_forces([[X, Y, Piece, Couleur]|Q],Dif),distance_plus_proche_lapin([[X, Y, Piece, Couleur]|Q],D), N is Dif+D.
 
 
-%Calcule la somme des forces des pieces argentees
-somme_des_forces_argent([], 0, silver)!
-somme_des_forces_argent([[X, Y, Type, gold]|Q], S, silver):-somme_des_forces([Q], S, silver)!
-somme_des_forces_argent([[X, Y, Type, silver]|Q], S, silver):-somme_des_forces([Q], Res, silver),force([X, Y, Type, silver],F), S is Res+F.
-
-
-%Calcule la somme des forces des pieces doree
-somme_des_forces_argent([], 0, gold)!
-somme_des_forces_argent([[X, Y, Type, silver]|Q], S, gold):-somme_des_forces([Q], S, gold)!
-somme_des_forces_argent([[X, Y, Type, gold]|Q], S, silver):-somme_des_forces([Q], Res, gold),force([X, Y, Type, gold],F), S is Res+F.
