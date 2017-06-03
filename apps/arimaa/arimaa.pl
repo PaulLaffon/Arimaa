@@ -4,7 +4,7 @@
       
 %Regarde si un element fait parti de la liste	
 element(X, [X|_]) :- !.
-element(X, [T|Q]) :- element(X,Q).
+element(X, [_|Q]) :- element(X,Q).
 
 %Concatene deux liste dans une troisieme
 concat([],L,L).
@@ -22,6 +22,11 @@ force([_,_,dog,_],2).
 force([_,_,horse,_],3).
 force([_,_,camel,_],4).
 force([_,_,elephant,_],5).
+
+is_trap(2, 2).
+is_trap(2, 5).
+is_trap(5, 2).
+is_trap(5, 5).
 
 % Renvoie vrai si la piece sur la case1 est plus forte que sur la case2
 est_plus_fort(Case1, Case2) :- force(Case1, F1), force(Case2, F2), F1 > F2.
@@ -51,29 +56,35 @@ get_moves([[[1,0],[2,0]],[[0,0],[1,0]],[[0,1],[0,0]],[[0,0],[0,1]]], Gamestate, 
 % ex : possibilite_deplacement([0, 1, camel, silver], X, Y, 3, Chemin, Board(à renseigner), NouveauBoard) => tout les deplacement à 3 cases maximum
 % Le retour se fait sur les variables Xsuiv, Ysuiv, Chemin et NouveauBoard
 possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, [[[X, Y], [Xsuiv, Ysuiv]]], Board, NouveauBoard) :- N > 0,
-                                                                  deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard).
+                                                                  deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard),
+                                                                  not(piece_morte([Xsuiv, Ysuiv, Type, Couleur], NouveauBoard)).
 
 possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, [[[X, Y], [Xsuiv, Ysuiv]]|Chemin], Board, NouveauBoard) :- N > 1,   
-                                                            deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, BoardSuiv), 
+                                                            deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, BoardSuiv),
+                                                            not(piece_morte([Xsuiv, Ysuiv, Type, Couleur], BoardSuiv)), 
                                                             possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 1, Chemin, BoardSuiv, NouveauBoard).
 
 % Quand on veut faire une autre action après pousser
 possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, Chemin, Board, NouveauBoard) :- N > 2,
                                                                   pousser([X, Y, Type, Couleur], Xsec, Ysec, Mouvements, Board, BoardSuiv),
+                                                                  not(piece_morte([Xsec, Ysec, Type, Couleur], BoardSuiv)),
                                                                   possibilite_deplacement([Xsec, Ysec, Type, Couleur], W, Z, N - 2, FinChemin, BoardSuiv, NouveauBoard),
                                                                   append(Mouvements, FinChemin, Chemin).
 
 % Lorsque pousser est la dernière action qu'on fait'
 possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Chemin, Board, NouveauBoard) :- N > 1,
-                                                                  pousser([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard).
+                                                                  pousser([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard), 
+                                                                  not(piece_morte([Xsuiv, Ysuiv, Type, Couleur], NouveauBoard)).
 
 possibilite_deplacement([X, Y, Type, Couleur], W, Z, N, Chemin, Board, NouveauBoard) :- N > 2,
                                                                   tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, Mouvements, Board, BoardSuiv),
+                                                                  not(piece_morte([Xsuiv, Ysuiv, Type, Couleur], BoardSuiv)),
                                                                   possibilite_deplacement([Xsuiv, Ysuiv, Type, Couleur], W, Z, N - 2, FinChemin, BoardSuiv, NouveauBoard),
                                                                   append(Mouvements, FinChemin, Chemin).
 
 possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Chemin, Board, NouveauBoard) :-  N > 1,
-                                                                  tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard).
+                                                                  tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, Chemin, Board, NouveauBoard),
+                                                                  not(piece_morte([Xsuiv, Ysuiv, Type, Couleur], NouveauBoard)).
 
 % Gère les possibilités de posser, est utilisé dans les possibilités de déplacement
 pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X, Y], [Xsec, Ysec]]], Board, NouveauBoard) :- 
@@ -98,10 +109,13 @@ tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, [[[X, Y], [Xsuiv, Ysuiv]], [[Xsec, Ys
                                                                   deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp),
                                                                   deplacement(Xsec, Ysec, X, Y, BoardTemp, NouveauBoard).
 
+% Indique si une piece est morte car elle se trouve sur un piege sans ami adjacent
+piece_morte([X, Y, Type, Couleur], Board) :- is_trap(X, Y), not(ami_adjacent([X, Y, Type, Couleur], Board)).
+
 % Deplacement d'une piece d'une seule case dans le board, utilisé dans la fonction possibilite_deplacement
 % ex : deplacement_une_case([1, 0, camel, silver], X, Y, Board(à renseigner), NouveauBoard) => retour sur Xsuiv, Ysuiv et NouveauBoard
 deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente(X, Y, Xsuiv, Ysuiv),
-                                                                  not(is_freeze([X, Y, Piece, Couleur], Board)),
+                                                                  not(is_freeze([X, Y, Type, Couleur], Board)),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
                                                                   deplacement(X, Y, Xsuiv, Ysuiv, Board, NouveauBoard).
 
