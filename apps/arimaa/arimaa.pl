@@ -94,7 +94,8 @@ pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X,
                                                                   pos_pousser([Xsec, Ysec, T, C], Xsuiv, Ysuiv),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
                                                                   deplacement(Xsec, Ysec, Xsuiv, Ysuiv, Board, BoardTemp),
-                                                                  deplacement(X, Y, Xsec, Ysec, BoardTemp, NouveauBoard).
+                                                                  deplacement(X, Y, Xsec, Ysec, BoardTemp, BoardTemp2),
+                                                                  enlever_piece_morte(BoardTemp2, BoardTemp2, NouveauBoard).
                                                                   
 % Renvoie les différentes position où on peut pousser un ennemi adjacent (On peut pousser dans tout les directions)
 pos_pousser([X, Y, _, _], Xsuiv, Ysuiv) :- pos_adjacente(X, Y, Xsuiv, Ysuiv).
@@ -107,10 +108,17 @@ tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, [[[X, Y], [Xsuiv, Ysuiv]], [[Xsec, Ys
                                                                   pos_adjacente(X, Y, Xsuiv, Ysuiv),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
                                                                   deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp),
-                                                                  deplacement(Xsec, Ysec, X, Y, BoardTemp, NouveauBoard).
+                                                                  deplacement(Xsec, Ysec, X, Y, BoardTemp, BoardTemp2),
+                                                                  enlever_piece_morte(BoardTemp2, BoardTemp2, NouveauBoard).
 
 % Indique si une piece est morte car elle se trouve sur un piege sans ami adjacent
 piece_morte([X, Y, Type, Couleur], Board) :- is_trap(X, Y), not(ami_adjacent([X, Y, Type, Couleur], Board)).
+
+% Enlever les possibles pièces ennemis qui deviennent morte lorsque l'on les pousse ou les tire
+% ex : enlever_piece_morte(Board, Board, NouveauBoard) ==> retour sur NouveauBoard, on mets 2 fois le board car 1 sert à le parcourrir, l'autre à vérifier les pièces adjacentes
+enlever_piece_morte(Board, [[X, Y, Type, Couleur]|Q], Q) :- is_trap(X, Y), not(ami_adjacent([X, Y, Type, Couleur], Board)), !.
+enlever_piece_morte(Board, [], []) :- !.
+enlever_piece_morte(Board, [[X, Y, Type, Couleur]|Q], [[X, Y, Type, Couleur]|Q2]) :- enlever_piece_morte(Board, Q, Q2).
 
 % Deplacement d'une piece d'une seule case dans le board, utilisé dans la fonction possibilite_deplacement
 % ex : deplacement_une_case([1, 0, camel, silver], X, Y, Board(à renseigner), NouveauBoard) => retour sur Xsuiv, Ysuiv et NouveauBoard
