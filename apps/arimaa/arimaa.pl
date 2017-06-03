@@ -6,6 +6,9 @@
 element(X, [X|_]) :- !.
 element(X, [_|Q]) :- element(X,Q).
 
+all_element(X, [X|_]).
+all_element(X, [_|Q]) :- all_element(X,Q).
+
 %Concatene deux liste dans une troisieme
 concat([],L,L).
 concat([T|Q],L,[T|R]):- concat(Q,L,R).
@@ -49,7 +52,7 @@ case_ami([_,_,_,X],[_,_,_,X]).
 % get_moves(Moves, [silver, []], [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]]).
 
 % default call
-get_moves([[[1,0],[2,0]],[[0,0],[1,0]],[[0,1],[0,0]],[[0,0],[0,1]]], Gamestate, Board).
+get_moves(Moves, [Side|PieceMorte], Board) :- meilleur_deplacement(Moves, 4, Side, Board).
 
 
 % Retourne les endroits ou une piece a le droit d'aller en 1 case, Xsuiv et Ysuiv sont les valeurs de retour
@@ -98,14 +101,14 @@ pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X,
                                                                   enlever_piece_morte(BoardTemp2, BoardTemp2, NouveauBoard).
                                                                   
 % Renvoie les différentes position où on peut pousser un ennemi adjacent (On peut pousser dans tout les directions)
-pos_pousser([X, Y, _, _], Xsuiv, Ysuiv) :- pos_adjacente(X, Y, Xsuiv, Ysuiv).
+pos_pousser([X, Y, Type, Couleur], Xsuiv, Ysuiv) :- pos_adjacente([X, Y, Type, Couleur], Xsuiv, Ysuiv).
 
 % Gère les possibilités de tirer une pièce, est utilisé dans les possibilités de déplacements
 tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, [[[X, Y], [Xsuiv, Ysuiv]], [[Xsec, Ysec], [X, Y]]], Board, NouveauBoard) :-
                                                                   piece_adjacente([X, Y, Type, Couleur], [Xsec, Ysec, T, C], Board),
                                                                   case_ennemi([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
                                                                   est_plus_fort([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
-                                                                  pos_adjacente(X, Y, Xsuiv, Ysuiv),
+                                                                  pos_adjacente([X, Y, Type, Couleur], Xsuiv, Ysuiv),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
                                                                   deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp),
                                                                   deplacement(Xsec, Ysec, X, Y, BoardTemp, BoardTemp2),
@@ -117,12 +120,12 @@ piece_morte([X, Y, Type, Couleur], Board) :- is_trap(X, Y), not(ami_adjacent([X,
 % Enlever les possibles pièces ennemis qui deviennent morte lorsque l'on les pousse ou les tire
 % ex : enlever_piece_morte(Board, Board, NouveauBoard) ==> retour sur NouveauBoard, on mets 2 fois le board car 1 sert à le parcourrir, l'autre à vérifier les pièces adjacentes
 enlever_piece_morte(Board, [[X, Y, Type, Couleur]|Q], Q) :- is_trap(X, Y), not(ami_adjacent([X, Y, Type, Couleur], Board)), !.
-enlever_piece_morte(Board, [], []) :- !.
+enlever_piece_morte(_, [], []) :- !.
 enlever_piece_morte(Board, [[X, Y, Type, Couleur]|Q], [[X, Y, Type, Couleur]|Q2]) :- enlever_piece_morte(Board, Q, Q2).
 
 % Deplacement d'une piece d'une seule case dans le board, utilisé dans la fonction possibilite_deplacement
 % ex : deplacement_une_case([1, 0, camel, silver], X, Y, Board(à renseigner), NouveauBoard) => retour sur Xsuiv, Ysuiv et NouveauBoard
-deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente(X, Y, Xsuiv, Ysuiv),
+deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente([X, Y, Type, Couleur], Xsuiv, Ysuiv),
                                                                   not(is_freeze([X, Y, Type, Couleur], Board)),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
                                                                   deplacement(X, Y, Xsuiv, Ysuiv, Board, NouveauBoard).
@@ -143,13 +146,13 @@ ami_adjacent([X, Y, Type, Couleur], Board) :-   piece_adjacente([X, Y, Type, Cou
                                                 case_ami([X, Y, Type, Couleur], Case), !.
 
 % Renvoie les différentes piece qui sont sur des cases adjacentes
-piece_adjacente([X, Y, _, _], Case, Board) :- pos_adjacente(X, Y, Xsuiv, Ysuiv), get_case(Xsuiv, Ysuiv, Case, Board).
+piece_adjacente([X, Y, Type, Couleur], Case, Board) :- pos_adjacente([X, Y, Type, Couleur], Xsuiv, Ysuiv), get_case(Xsuiv, Ysuiv, Case, Board).
 
 % Renvoie les positions adjacentes a une case qui sont sur le plateau
-pos_adjacente(X, Y, Xsuiv, Y) :- dans_plateau(X - 1, Y), Xsuiv is X - 1.
-pos_adjacente(X, Y, Xsuiv, Y) :- dans_plateau(X + 1, Y), Xsuiv is X + 1.
-pos_adjacente(X, Y, X, Ysuiv) :- dans_plateau(X, Y - 1), Ysuiv is Y - 1.
-pos_adjacente(X, Y, X, Ysuiv) :- dans_plateau(X, Y + 1), Ysuiv is Y + 1.
+pos_adjacente([X, Y, Type, _], Xsuiv, Y) :- Type \= rabbit, dans_plateau(X - 1, Y), Xsuiv is X - 1.
+pos_adjacente([X, Y, _, _], Xsuiv, Y) :- dans_plateau(X + 1, Y), Xsuiv is X + 1.
+pos_adjacente([X, Y, _, _], X, Ysuiv) :- dans_plateau(X, Y - 1), Ysuiv is Y - 1.
+pos_adjacente([X, Y, _, _], X, Ysuiv) :- dans_plateau(X, Y + 1), Ysuiv is Y + 1.
 
 % Renvoie si la position se situe dans la plateau ou pas
 dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
@@ -158,22 +161,39 @@ dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
 % ex : get_case(0, 0, Case, [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]])
 get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur], Board).
 
-%Calcule la somme des forces des pieces argentees
-somme_des_forces_argent([], 0)!.
-somme_des_forces_argent([[X, Y, Type, gold]|Q], S):-somme_des_forces(Q, S)!.
-somme_des_forces_argent([[X, Y, Type, silver]|Q], S):-somme_des_forces(Q, Res),force([X, Y, Type, silver],F), S is Res+F.
+valeur([_,_,rabbit,_], 10).
+valeur([_,_,cat,_], 5).
+valeur([_,_,dog,_], 7).
+valeur([_,_,horse,_], 10).
+valeur([_,_,camel,_], 50).
+valeur([_,_,elephant,_], 100).
 
+% Différence des force par rapport à une couleur
+difference_des_forces([], _, 0) :- !.
+difference_des_forces([[X, Y, Type, Couleur]|Q], Couleur, Somme) :- difference_des_forces(Q, Couleur, Temp), valeur([X, Y, Type, Couleur], V), Somme is Temp + V.
+difference_des_forces([[X, Y, Type, C]|Q], Couleur, Somme) :- C \= Couleur, difference_des_forces(Q, Couleur, Temp), valeur([X, Y, Type, Couleur], V), Somme is Temp - V.
 
-%Calcule la somme des forces des pieces doree
-somme_des_forces_dore([], 0)!.
-somme_des_forces_dore([[X, Y, Type, silver]|Q], S):-somme_des_forces(Q, S)!.
-somme_des_forces_dore([[X, Y, Type, gold]|Q], S,):-somme_des_forces(Q, Res),force([X, Y, Type, gold],F), S is Res+F.
-
-%Calcule la différence des forces entre les pieces argentees et les pieces dorres
-
-difference_des_forces([[X, Y, Piece, Couleur]|Q],Dif):-somme_des_forces_argent([[X, Y, Type, Couleur]|Q], S1),somme_des_forces_dore([[X, Y, Type, Couleur]|Q], S2), Dif is S1-S2.
 
 %Renvoie une note qui evalue la situation du board. 
-note([[X, Y, Piece, Couleur]|Q], N) :- difference_des_forces([[X, Y, Piece, Couleur]|Q],Dif),distance_plus_proche_lapin([[X, Y, Piece, Couleur]|Q],D), N is Dif+D.
+note(Board, Couleur, N) :- difference_des_forces(Board, Couleur, D), N is D.
 
+% Retourne toutes les piece d'une couleur
+piece_allie(Couleur, [X, Y, Type, Couleur], Board) :- all_element([X, Y, Type, Couleur], Board).
 
+% Renvoie vrai s'il exite un meilleur déplacement que celui dont la note est donnée en paramètre
+un_meilleur_deplacement(N, Couleur, Board, Note) :-  piece_allie(Couleur, Piece, Board),
+                                                      possibilite_deplacement(Piece, _, _, N, _, Board, NouveauBoard),
+                                                      note(NouveauBoard, Couleur, NouvelleNote),
+                                                      NouvelleNote > Note.
+
+% Renvoie le meilleur déplacement à faire, appeler dans la fonction moves
+meilleur_deplacement([], 0, _, _) :- !.
+meilleur_deplacement(Deplacement, N, Couleur, Board) :-   N > 0,
+                                                                  piece_allie(Couleur, Piece, Board),
+                                                                  possibilite_deplacement(Piece, _, _, N, Chemin, Board, NouveauBoard),
+                                                                  note(NouveauBoard, Couleur, Note),
+                                                                  not(un_meilleur_deplacement(N, Couleur, Board, Note)), !,
+                                                                  length(Chemin, Longeur),
+                                                                  NouvelleLongeur is N - Longeur,
+                                                                  meilleur_deplacement(CheminSuiv, NouvelleLongeur, Couleur, NouveauBoard),
+                                                                  append(Chemin, CheminSuiv, Deplacement).
