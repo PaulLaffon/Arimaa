@@ -175,14 +175,25 @@ valeur([_,_,horse,_], 10).
 valeur([_,_,camel,_], 50).
 valeur([_,_,elephant,_], 100).
 
+opposite_color(silver, gold).
+opposite_color(gold, silver).
+
 % Différence des force par rapport à une couleur
 difference_des_forces([], _, 0) :- !.
 difference_des_forces([[X, Y, Type, Couleur]|Q], Couleur, Somme) :- difference_des_forces(Q, Couleur, Temp), valeur([X, Y, Type, Couleur], V), Somme is Temp + V.
 difference_des_forces([[X, Y, Type, C]|Q], Couleur, Somme) :- C \= Couleur, difference_des_forces(Q, Couleur, Temp), valeur([X, Y, Type, Couleur], V), Somme is Temp - V.
 
+% Itère sur toutes les pièces d'une couleur qui sont freeze (Renvoie la pièce actuelle sur Piece)
+piece_freeze(Couleur, Piece, Board) :- piece_allie(Couleur, Piece, Board), is_freeze(Piece, Board).
+
+% Renvoie le nombre de pièce d'une couleur qui sont freeze
+nombre_piece_freeze(Couleur, Board, Nombre) :- findall(Piece, piece_freeze(Couleur, Piece, Board), Liste), length(Liste, Nombre).
+
+% Renvoie la différence entre le nombre de pièce freeze
+difference_piece_freeze(Couleur, Board, Nombre) :- nombre_piece_freeze(Couleur, Board, N1), opposite_color(Couleur, Ennemi), nombre_piece_freeze(Ennemi, Board, N2), Nombre is N2 - N1.
 
 %Renvoie une note qui evalue la situation du board. 
-note(Board, Couleur, N) :- difference_des_forces(Board, Couleur, D), N is D.
+note(Board, Couleur, N) :- difference_des_forces(Board, Couleur, D), difference_piece_freeze(Couleur, Board, F), N is D + F.
 
 % Retourne toutes les piece d'une couleur
 piece_allie(Couleur, [X, Y, Type, Couleur], Board) :- all_element([X, Y, Type, Couleur], Board).
