@@ -6,6 +6,11 @@
 element(X, [X|_]) :- !.
 element(X, [_|Q]) :- element(X,Q).
 
+% Element avec l'indice de l'élément, commençant par 1
+element(X, [X|_], 1).
+element(X, [_|Q], N) :- element(X, Q, M), N is M + 1.
+
+% Peut s'unifier plusieur fois si l'élément est présent plusieur fois dans le tableau
 all_element(X, [X|_]).
 all_element(X, [_|Q]) :- all_element(X,Q).
 
@@ -26,6 +31,7 @@ force([_,_,horse,_],3).
 force([_,_,camel,_],4).
 force([_,_,elephant,_],5).
 
+% Position des pièges
 is_trap(2, 2).
 is_trap(2, 5).
 is_trap(5, 2).
@@ -52,7 +58,7 @@ case_ami([_,_,_,X],[_,_,_,X]).
 % get_moves(Moves, [silver, []], [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]]).
 
 % default call
-get_moves(Moves, [Side|PieceMorte], Board) :- meilleur_deplacement(Moves, 4, Side, Board).
+get_moves(Moves, [Side|_], Board) :- best_deplacement(Moves, 4, Side, Board).
 
 
 % Retourne les endroits ou une piece a le droit d'aller en 1 case, Xsuiv et Ysuiv sont les valeurs de retour
@@ -161,6 +167,7 @@ dans_plateau(X, Y) :- X >= 0, Y >= 0, X < 8, Y < 8.
 % ex : get_case(0, 0, Case, [[0,0,rabbit,silver],[0,1,rabbit,silver],[0,2,horse,silver],[0,3,rabbit,silver],[0,4,elephant,silver],[0,5,rabbit,silver],[0,6,rabbit,silver],[0,7,rabbit,silver],[1,0,camel,silver],[1,1,cat,silver],[1,2,rabbit,silver],[1,3,dog,silver],[1,4,rabbit,silver],[1,5,horse,silver],[1,6,dog,silver],[1,7,cat,silver],[2,7,rabbit,gold],[6,0,cat,gold],[6,1,horse,gold],[6,2,camel,gold],[6,3,elephant,gold],[6,4,rabbit,gold],[6,5,dog,gold],[6,6,rabbit,gold],[7,0,rabbit,gold],[7,1,rabbit,gold],[7,2,rabbit,gold],[7,3,cat,gold],[7,4,dog,gold],[7,5,rabbit,gold],[7,6,horse,gold],[7,7,rabbit,gold]])
 get_case(X, Y, [X, Y, Piece, Couleur], Board) :- element([X, Y, Piece, Couleur], Board).
 
+% Valeur des différentes pièces
 valeur([_,_,rabbit,_], 10).
 valeur([_,_,cat,_], 5).
 valeur([_,_,dog,_], 7).
@@ -180,20 +187,38 @@ note(Board, Couleur, N) :- difference_des_forces(Board, Couleur, D), N is D.
 % Retourne toutes les piece d'une couleur
 piece_allie(Couleur, [X, Y, Type, Couleur], Board) :- all_element([X, Y, Type, Couleur], Board).
 
-% Renvoie vrai s'il exite un meilleur déplacement que celui dont la note est donnée en paramètre
-un_meilleur_deplacement(N, Couleur, Board, Note) :-  piece_allie(Couleur, Piece, Board),
-                                                      possibilite_deplacement(Piece, _, _, N, _, Board, NouveauBoard),
-                                                      note(NouveauBoard, Couleur, NouvelleNote),
-                                                      NouvelleNote > Note.
+% Maximum entre 2 valeurs
+max(A, B, A) :- A >= B, !.
+max(A, B, B) :- B >= A, !.
 
-% Renvoie le meilleur déplacement à faire, appeler dans la fonction moves
-meilleur_deplacement([], 0, _, _) :- !.
-meilleur_deplacement(Deplacement, N, Couleur, Board) :-   N > 0,
-                                                                  piece_allie(Couleur, Piece, Board),
-                                                                  possibilite_deplacement(Piece, _, _, N, Chemin, Board, NouveauBoard),
-                                                                  note(NouveauBoard, Couleur, Note),
-                                                                  not(un_meilleur_deplacement(N, Couleur, Board, Note)), !,
-                                                                  length(Chemin, Longeur),
-                                                                  NouvelleLongeur is N - Longeur,
-                                                                  meilleur_deplacement(CheminSuiv, NouvelleLongeur, Couleur, NouveauBoard),
-                                                                  append(Chemin, CheminSuiv, Deplacement).
+% Retourne le Maximum d'une liste d'entier
+max_list([T|Q], Max) :- max_list(Q, T, Max).
+
+max_list([], Max, Max).
+max_list([T|Q], Max0, Max) :- max(T, Max0, M), max_list(Q, M, Max).
+
+% Effectuer une série de deplacement, utilisé pour construire le NouveauBoard dans best_deplacement, après avoir déjà trouver un déplacement
+effectuer_deplacement([], Board, Board).
+effectuer_deplacement([[[X, Y], [Xsuiv, Ysuiv]]|Q], Board, NouveauBoard) :-   deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp), 
+                                                                              enlever_piece_morte(BoardTemp, BoardTemp, BoardTemp2),
+                                                                              effectuer_deplacement(Q, BoardTemp2, NouveauBoard).
+
+% Renvoie le meilleur déplacement à faire, appelé dans la fonction moves
+% On prends d'abord le meilleur déplacement d'une seule pièce, et on continue à prendre le meilleur déplacement tant qu'il nous reste des déplacement à faire
+best_deplacement([], 0, _, _) :- !.
+best_deplacement(Deplacement, N, Couleur, Board) :- N > 0, bagof(Chemin, tout_deplacement(N, Couleur, Board, Chemin), ListeChemin),
+                                                      bagof(Note, toute_note(N, Couleur, Board, Note), ListeNote),
+                                                      max_list(ListeNote, Max), 
+                                                      element(Max, ListeNote, Indice),
+                                                      element(PortionDeplacement, ListeChemin, Indice),
+                                                      length(PortionDeplacement, Longeur),
+                                                      NouvelleLongeur is N - Longeur,
+                                                      effectuer_deplacement(PortionDeplacement, Board, NouveauBoard), !,
+                                                      best_deplacement(CheminSuiv, NouvelleLongeur, Couleur, NouveauBoard),
+                                                      append(PortionDeplacement, CheminSuiv, Deplacement).
+
+% Itère sur tous les déplacement possible de toutes les pièces, utilié par la fonction bagof pour générer une liste de tous les déplacement possible
+tout_deplacement(N, Couleur, Board, Chemin) :- N > 0, piece_allie(Couleur, Piece, Board), possibilite_deplacement(Piece, _, _, N, Chemin, Board, _).
+
+% Itère sur tous les NouveauBoard possible et calcule la note, utilié par la fonction bagof pour générer une liste de toutes les notes (même indice que dans tous_deplacement)
+toute_note(N, Couleur, Board, Note) :- N > 0, piece_allie(Couleur, Piece, Board), possibilite_deplacement(Piece, _, _, N, _, Board, NouveauBoard), note(NouveauBoard, Couleur, Note).
