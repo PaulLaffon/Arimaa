@@ -22,6 +22,28 @@ concat([T|Q],L,[T|R]):- concat(Q,L,R).
 est_pas_vide([X,Y],Board):-element([X,Y,_,_],Board).
 est_vide(X, Y, Board) :- not(element([X, Y, _, _], Board)).
 
+% Maximum entre 2 valeurs
+max(A, B, A) :- A >= B, !.
+max(A, B, B) :- B >= A, !.
+
+% Retourne le Maximum d'une liste d'entier
+max_list([T|Q], Max) :- max_list(Q, T, Max).
+
+max_list([], Max, Max).
+max_list([T|Q], Max0, Max) :- max(T, Max0, M), max_list(Q, M, Max).
+
+% Minimum entre 2 valeurs
+min(A, B, A) :- A =< B, !.
+min(A, B, B) :- B =< A, !.
+
+% Retourne le Maximum d'une liste d'entier
+min_list([T|Q], Min) :- min_list(Q, T, Min).
+
+min_list([], Min, Min).
+min_list([T|Q], Min0, Min) :- min(T, Min0, M), min_list(Q, M, Min).
+
+somme([], 0).
+somme([T|Q], Somme) :- somme(Q, S), Somme is S + T.
 
 %indique la force d'une piece
 force([_,_,rabbit,_],0).
@@ -134,7 +156,8 @@ enlever_piece_morte(Board, [[X, Y, Type, Couleur]|Q], [[X, Y, Type, Couleur]|Q2]
 deplacement_une_case([X, Y, Type, Couleur], Xsuiv, Ysuiv, Board, NouveauBoard) :- pos_adjacente([X, Y, Type, Couleur], Xsuiv, Ysuiv),
                                                                   not(is_freeze([X, Y, Type, Couleur], Board)),
                                                                   est_vide(Xsuiv, Ysuiv, Board),
-                                                                  deplacement(X, Y, Xsuiv, Ysuiv, Board, NouveauBoard).
+                                                                  deplacement(X, Y, Xsuiv, Ysuiv, Board, BoardTemp),
+                                                                  enlever_piece_morte(BoardTemp, BoardTemp, NouveauBoard).
 
 % Déplace la piece en (X, Y) en (Xsuiv, Ysuiv) dans le board result, ne vérifie pas l'intégrité du nouveauBoard
 % ex : deplacement(0, 0, 0, 1, ancienBoard, NouveauBoard) => la piece en (0, 0) passe en (0, 1)
@@ -192,21 +215,43 @@ nombre_piece_freeze(Couleur, Board, Nombre) :- findall(Piece, piece_freeze(Coule
 % Renvoie la différence entre le nombre de pièce freeze
 difference_piece_freeze(Couleur, Board, Nombre) :- nombre_piece_freeze(Couleur, Board, N1), opposite_color(Couleur, Ennemi), nombre_piece_freeze(Ennemi, Board, N2), Nombre is N2 - N1.
 
+
+% Distance du lapin d'une couleur le plus proche par rapport à la ligne de victoire
+dist_proche_lapin(Couleur, Board, Dist) :- bagof(D, distance_lapin(Couleur, Board, D), Liste), min_list(Liste, Dist).
+
+% Distance de chacun des lapin d'une couleur par rapport à la ligne de victoire
+distance_lapin(Couleur, Board, D) :- piece_allie(Couleur, [X, Y, rabbit, Couleur], Board), distance_victoire([X, Y, rabbit, Couleur], D).
+
+victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Dist \= 0, Score is 0, !.
+victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Score is 1000000.
+
+% Distance d'un lapin par rapport à la ligne ou il gagne
+distance_victoire([X, _, rabbit, silver], Distance) :- Distance is 7 - X, !.
+distance_victoire([X, _, rabbit, gold], X) :- !.
+
+distance(X, Y, X2, Y2, Dist) :- abs(X - X2, R), abs(Y - Y2, R2), Dist is R + R2.
+
+distance_min_piege([X, Y, Type, Couleur], Distance) :- bagof(D, distance_piege([X, Y, Type, Couleur], D), Liste), min_list(Liste, Distance).
+
+distance_piege([X, Y, Type, Couleur], Distance) :- is_trap(X2, Y2), distance(X, Y, X2, Y2, Distance).
+
+dist_piege(Couleur, Board, Distance) :- piece_allie(Couleur, [X, Y, Type, Couleur], Board), distance_min_piege([X, Y, Type, Couleur], D), D < 2, Distance is D + 2, Type \= elephant, !.
+dist_piege(_, _, 0).
+
+somme_dist_piege(Couleur, Board, Somme) :- bagof(D, dist_piege(Couleur, Board, D), Liste), somme(Liste, Somme).
+
 %Renvoie une note qui evalue la situation du board. 
-note(Board, Couleur, N) :- difference_des_forces(Board, Couleur, D), difference_piece_freeze(Couleur, Board, F), N is D + F.
+note(Board, Couleur, N) :-    opposite_color(Couleur, Ennemi),
+                              difference_des_forces(Board, Couleur, D), 
+                              difference_piece_freeze(Couleur, Board, F), 
+                              dist_proche_lapin(Ennemi, Board, DistLapin), 
+                              victoire(Couleur, Board, Score),
+                              somme_dist_piege(Couleur, Board, Somme),
+                              N is D + F + Score - DistLapin - Somme.
 
 % Retourne toutes les piece d'une couleur
 piece_allie(Couleur, [X, Y, Type, Couleur], Board) :- all_element([X, Y, Type, Couleur], Board).
 
-% Maximum entre 2 valeurs
-max(A, B, A) :- A >= B, !.
-max(A, B, B) :- B >= A, !.
-
-% Retourne le Maximum d'une liste d'entier
-max_list([T|Q], Max) :- max_list(Q, T, Max).
-
-max_list([], Max, Max).
-max_list([T|Q], Max0, Max) :- max(T, Max0, M), max_list(Q, M, Max).
 
 % Effectuer une série de deplacement, utilisé pour construire le NouveauBoard dans best_deplacement, après avoir déjà trouver un déplacement
 effectuer_deplacement([], Board, Board).
@@ -226,6 +271,9 @@ best_deplacement(Deplacement, N, Couleur, Board) :- N > 0, bagof(Chemin, tout_de
                                                       NouvelleLongeur is N - Longeur,
                                                       effectuer_deplacement(PortionDeplacement, Board, NouveauBoard), !,
                                                       best_deplacement(CheminSuiv, NouvelleLongeur, Couleur, NouveauBoard),
+                                                      length(ListeNote, L1),
+                                                      length(ListeChemin, L2),
+                                                      writeln(L1), writeln(L2),
                                                       append(PortionDeplacement, CheminSuiv, Deplacement).
 
 % Itère sur tous les déplacement possible de toutes les pièces, utilié par la fonction bagof pour générer une liste de tous les déplacement possible
