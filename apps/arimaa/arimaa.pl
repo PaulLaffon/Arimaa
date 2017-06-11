@@ -225,6 +225,9 @@ distance_lapin(Couleur, Board, D) :- piece_allie(Couleur, [X, Y, rabbit, Couleur
 victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Dist \= 0, Score is 0, !.
 victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Score is 1000000.
 
+perte(Couleur,Board,Score):-opposite_color(Couleur,Ennemi),dist_proche_lapin(Ennemi, Board, Dist), Dist \= 0, Score is 0, !.
+perte(Couleur,Board,Score):-opposite_color(Couleur,Ennemi),dist_proche_lapin(Ennemi, Board, Dist), Score is 100000.
+
 % Distance d'un lapin par rapport à la ligne ou il gagne
 distance_victoire([X, _, rabbit, silver], Distance) :- Distance is 7 - X, !.
 distance_victoire([X, _, rabbit, gold], X) :- !.
@@ -246,8 +249,9 @@ note(Board, Couleur, N) :-    opposite_color(Couleur, Ennemi),
                               difference_piece_freeze(Couleur, Board, F), 
                               dist_proche_lapin(Ennemi, Board, DistLapin), 
                               victoire(Couleur, Board, Score),
+			      perte(Couleur,Board,Malus),
                               somme_dist_piege(Couleur, Board, Somme),
-                              N is D + F + Score - DistLapin - Somme.
+                              N is D + F + Score - DistLapin - Somme- Malus.
 
 % Retourne toutes les piece d'une couleur
 piece_allie(Couleur, [X, Y, Type, Couleur], Board) :- all_element([X, Y, Type, Couleur], Board).
