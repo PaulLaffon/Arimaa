@@ -119,6 +119,7 @@ possibilite_deplacement([X, Y, Type, Couleur], Xsuiv, Ysuiv, N, Chemin, Board, N
 
 % Gère les possibilités de posser, est utilisé dans les possibilités de déplacement
 pousser([X, Y, Type, Couleur], Xsec, Ysec, [[[Xsec, Ysec], [Xsuiv, Ysuiv]], [[X, Y], [Xsec, Ysec]]], Board, NouveauBoard) :- 
+                                                                  not(is_freeze([X, Y, Type, Couleur], Board)),
                                                                   piece_adjacente([X, Y, Type, Couleur], [Xsec, Ysec, T, C], Board),
                                                                   case_ennemi([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
                                                                   est_plus_fort([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
@@ -133,6 +134,7 @@ pos_pousser([X, Y, Type, Couleur], Xsuiv, Ysuiv) :- pos_adjacente([X, Y, Type, C
 
 % Gère les possibilités de tirer une pièce, est utilisé dans les possibilités de déplacements
 tirer([X, Y, Type, Couleur], Xsuiv, Ysuiv, [[[X, Y], [Xsuiv, Ysuiv]], [[Xsec, Ysec], [X, Y]]], Board, NouveauBoard) :-
+                                                                  not(is_freeze([X, Y, Type, Couleur], Board)),
                                                                   piece_adjacente([X, Y, Type, Couleur], [Xsec, Ysec, T, C], Board),
                                                                   case_ennemi([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
                                                                   est_plus_fort([X, Y, Type, Couleur], [Xsec, Ysec, T, C]),
@@ -223,10 +225,10 @@ dist_proche_lapin(Couleur, Board, Dist) :- bagof(D, distance_lapin(Couleur, Boar
 distance_lapin(Couleur, Board, D) :- piece_allie(Couleur, [X, Y, rabbit, Couleur], Board), distance_victoire([X, Y, rabbit, Couleur], D).
 
 victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Dist \= 0, Score is 0, !.
-victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, Dist), Score is 1000000.
+victoire(Couleur, Board, Score) :- dist_proche_lapin(Couleur, Board, _), Score is 1000000.
 
 perte(Couleur,Board,Score):-opposite_color(Couleur,Ennemi),dist_proche_lapin(Ennemi, Board, Dist), Dist \= 0, Score is 0, !.
-perte(Couleur,Board,Score):-opposite_color(Couleur,Ennemi),dist_proche_lapin(Ennemi, Board, Dist), Score is 100000.
+perte(Couleur,Board,Score):-opposite_color(Couleur,Ennemi),dist_proche_lapin(Ennemi, Board, _), Score is 100000.
 
 % Distance d'un lapin par rapport à la ligne ou il gagne
 distance_victoire([X, _, rabbit, silver], Distance) :- Distance is 7 - X, !.
@@ -236,7 +238,7 @@ distance(X, Y, X2, Y2, Dist) :- abs(X - X2, R), abs(Y - Y2, R2), Dist is R + R2.
 
 distance_min_piege([X, Y, Type, Couleur], Distance) :- bagof(D, distance_piege([X, Y, Type, Couleur], D), Liste), min_list(Liste, Distance).
 
-distance_piege([X, Y, Type, Couleur], Distance) :- is_trap(X2, Y2), distance(X, Y, X2, Y2, Distance).
+distance_piege([X, Y, _, _], Distance) :- is_trap(X2, Y2), distance(X, Y, X2, Y2, Distance).
 
 dist_piege(Couleur, Board, Distance) :- piece_allie(Couleur, [X, Y, Type, Couleur], Board), distance_min_piege([X, Y, Type, Couleur], D), D < 2, Distance is D + 2, Type \= elephant, !.
 dist_piege(_, _, 0).
@@ -249,7 +251,7 @@ note(Board, Couleur, N) :-    opposite_color(Couleur, Ennemi),
                               difference_piece_freeze(Couleur, Board, F), 
                               dist_proche_lapin(Ennemi, Board, DistLapin), 
                               victoire(Couleur, Board, Score),
-			      perte(Couleur,Board,Malus),
+			            perte(Couleur,Board,Malus),
                               somme_dist_piege(Couleur, Board, Somme),
                               N is D + F + Score - DistLapin - Somme- Malus.
 
@@ -275,9 +277,6 @@ best_deplacement(Deplacement, N, Couleur, Board) :- N > 0, bagof(Chemin, tout_de
                                                       NouvelleLongeur is N - Longeur,
                                                       effectuer_deplacement(PortionDeplacement, Board, NouveauBoard), !,
                                                       best_deplacement(CheminSuiv, NouvelleLongeur, Couleur, NouveauBoard),
-                                                      length(ListeNote, L1),
-                                                      length(ListeChemin, L2),
-                                                      writeln(L1), writeln(L2),
                                                       append(PortionDeplacement, CheminSuiv, Deplacement).
 
 % Itère sur tous les déplacement possible de toutes les pièces, utilié par la fonction bagof pour générer une liste de tous les déplacement possible
